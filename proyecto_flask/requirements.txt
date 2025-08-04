@@ -1,0 +1,12 @@
+Flask
+pandas
+numpy
+statsmodels
+scikit-learn
+skforecast
+lightgbm
+joblib
+plotly
+holidays
+shap
+matplotlib

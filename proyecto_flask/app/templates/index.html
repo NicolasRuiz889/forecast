@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Forecast APP — ScotiaGBS</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <script>
+    function toggleSection(id){
+      document.querySelectorAll('form.section').forEach(f=>{
+        if(f.id===id) f.classList.toggle('active');
+        else          f.classList.remove('active');
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Forecast APP</h1>
+    <small>Elaborada por Nicolas Alejandro Ruz Alarcon — Creación: 2025 — ScotiaGBS</small>
+  </header>
+  <nav>
+    <button onclick="window.location='/'">🏠 Inicio</button>
+    <button onclick="toggleSection('limpiar')">🧼 Limpiar Excel</button>
+    <button onclick="toggleSection('estacionariedad')">📊 Estacionariedad</button>
+    <button onclick="toggleSection('dividir')">📆 División</button>
+    <button onclick="toggleSection('autocorr')">📈 Autocorrelación</button>
+    <button onclick="toggleSection('train_basic')">🚀 Entrenar Básico</button>
+    <button onclick="toggleSection('exog_adv')">🌐 Exógenas Avanzado</button>
+    <button onclick="toggleSection('prob')">📊 Pronóstico Probabilístico</button>
+    <button onclick="toggleSection('interp')">🔍 Interpretabilidad</button>
+    <button onclick="toggleSection('futuro')">⏭️ Predecir Futuro</button>
+  </nav>
+
+  <div class="container">
+
+    {% if mensaje %}<div class="alert alert--success">{{ mensaje }}</div>{% endif %}
+    {% if error   %}<div class="alert alert--error">{{ error   }}</div>{% endif %}
+
+    <!-- LIMPIAR EXCEL -->
+    <form id="limpiar" class="section" action="/limpiar" method="post" enctype="multipart/form-data">
+      <label>Selecciona tu archivo Excel:</label>
+      <input type="file" name="file" accept=".xlsx,.xls" required>
+      <button type="submit">🧼 Limpiar y Guardar</button>
+    </form>
+
+    <!-- ESTACIONARIEDAD -->
+    <form id="estacionariedad" class="section" action="/estacionariedad" method="post">
+      <button type="submit">📊 Analizar Estacionariedad</button>
+    </form>
+
+    <!-- DIVISIÓN -->
+    <form id="dividir" class="section" action="/dividir" method="post">
+      <label>Número de meses (4–6):</label>
+      <input type="number" name="meses" min="4" max="6" value="6" required>
+      <button type="submit">📆 Dividir Últimos Meses</button>
+    </form>
+
+    <!-- AUTOCORRELACIÓN -->
+    <form id="autocorr" class="section" action="/autocorrelacion" method="post">
+      <label>Orden de diferenciación:</label>
+      <input type="number" name="orden_diff" min="0" max="2" value="1" required>
+      <label>Número de lags:</label>
+      <input type="number" name="n_lags" min="10" max="200" value="60" required>
+      <button type="submit">📈 Calcular Autocorrelaciones</button>
+    </form>
+
+    <!-- ENTRENAR BÁSICO -->
+    <form id="train_basic" class="section" action="/entrenar_basico" method="post">
+      <label>Tamaño de ventana (RollingFeatures):</label>
+      <input type="number" name="window_size" min="24" max="240" value="96" required>
+      <button type="submit">🚀 Entrenar Modelo Básico</button>
+    </form>
+
+    {% if model_list %}
+      <!-- EXÓGENAS AVANZADO -->
+      <form id="exog_adv" class="section" action="/entrenar_exogenas_avanzado" method="post">
+        <label>Series (Ctrl+clic):</label>
+        <select name="series_to_train" multiple size="5" required>
+          {% for s in model_list %}<option>{{ s }}</option>{% endfor %}
+        </select>
+        <label>Lags (coma separados):</label>
+        <input type="text" name="lags_grid" placeholder="48,96,144" required>
+        <label>Trials (bayes opt):</label>
+        <input type="number" name="n_trials" min="1" max="100" value="20">
+        <label>País de feriados:</label>
+        <select name="pais_feriados" required>
+          <option value="">— Selecciona —</option>
+          <option>Chile</option><option>Panama</option><option>Costa Rica</option>
+          <option>Barbados</option><option>Jamaica</option><option>Canada</option>
+          <option>República Dominicana</option><option>Perú</option><option>Uruguay</option>
+          <option>Trinidad y Tobago</option><option>Bahamas</option>
+        </select>
+        <button type="submit">🌐 Entrenar Exógenas Avanzado</button>
+      </form>
+
+      <!-- PRONÓSTICO PROBABILÍSTICO -->
+      <form id="prob" class="section" action="/pronostico_probabilistico" method="post">
+        <label>Modelos entrenados:</label>
+        <select name="serie" required>
+          <option value="">— Elige una serie —</option>
+          {% for s in model_list %}<option>{{ s }}</option>{% endfor %}
+        </select>
+        <label>Interval (%) (e.g. 5,95):</label>
+        <input type="text" name="interval" placeholder="5,95" required>
+        <label>Horizon (pasos):</label>
+        <input type="number" name="steps" min="1" value="48" required>
+        <button type="submit">📊 Ejecutar Pronóstico Probabilístico</button>
+      </form>
+
+      <!-- INTERPRETABILIDAD -->
+      <form id="interp" class="section" action="/interpretabilidad" method="post">
+        <label>Modelos entrenados:</label>
+        <select name="serie" required>
+          <option value="">— Elige una serie —</option>
+          {% for s in model_list %}<option>{{ s }}</option>{% endfor %}
+        </select>
+        <button type="submit">🔍 Ejecutar Interpretabilidad</button>
+      </form>
+
+      <!-- PREDECIR FUTURO -->
+      <form id="futuro" class="section" action="/predecir_futuro" method="post">
+        <label>Modelos entrenados:</label>
+        <select name="serie" required>
+          <option value="">— Elige una serie —</option>
+          {% for s in model_list %}<option>{{ s }}</option>{% endfor %}
+        </select>
+        <label>Días a predecir (1–31):</label>
+        <input type="number" name="dias_predecir" min="1" max="31" value="30" required>
+        <button type="submit">⏭️ Generar Predicción Futura</button>
+      </form>
+    {% else %}
+      <div class="alert alert--error">
+        Para usar modelos avanzados primero debes entrenar al menos una serie.
+      </div>
+    {% endif %}
+
+    <!-- BLOQUES DE RESULTADOS -->
+    <!-- División Temporal -->
+    {% if info_division %}
+      <h2>Detalles División Temporal</h2>
+      <table>
+        <tr><th>Conjunto</th><th>Inicio</th><th>Fin</th></tr>
+        <tr><td>Train</td><td>{{ info_division.train[0] }}</td><td>{{ info_division.train[1] }}</td></tr>
+        <tr><td>Validación</td><td>{{ info_division.val[0] }}</td><td>{{ info_division.val[1] }}</td></tr>
+        <tr><td>Test</td><td>{{ info_division.test[0] }}</td><td>{{ info_division.test[1] }}</td></tr>
+      </table>
+    {% endif %}
+
+    <!-- Estacionariedad -->
+    {% if estacionariedad %}
+      <h2>Resultados de Estacionariedad (Train)</h2>
+      <p style="font-style:italic;color:#555;">
+        📅 Rango: {{ rango_estacionariedad }}
+      </p>
+      <table>
+        <tr>
+          <th>Variable</th><th>ADF(orig.)</th><th>KPSS(orig.)</th>
+          <th>ADF(diff.)</th><th>KPSS(diff.)</th>
+        </tr>
+        {% for var,a0,k0,a1,k1 in estacionariedad %}
+        <tr><td>{{var}}</td><td>{{a0}}</td><td>{{k0}}</td><td>{{a1}}</td><td>{{k1}}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+
+    <!-- Autocorrelaciones -->
+    {% if autocorrelaciones %}
+      <h2>Autocorrelaciones por Variable</h2>
+      {% for var,tabla in autocorrelaciones.items() %}
+        <h3>{{ var }}</h3>
+        <table>
+          <tr><th>Lag</th><th>ACF</th><th>PACF</th><th>|ACF|</th><th>|PACF|</th></tr>
+          {% for row in tabla.itertuples() %}
+          <tr>
+            <td>{{ row.lag }}</td>
+            <td>{{"%.3f"|format(row.autocorrelation)}}</td>
+            <td>{{"%.3f"|format(row.partial_autocorrelation)}}</td>
+            <td>{{"%.3f"|format(row.autocorrelation_abs)}}</td>
+            <td>{{"%.3f"|format(row.partial_autocorrelation_abs)}}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Entrenamiento Básico -->
+    {% if resultados_basico %}
+      <h2>Resultados Entrenamiento Básico</h2>
+      {% for r in resultados_basico %}
+        <h3>{{ r.serie }} — {{ r.estado }}</h3>
+        {% if r.mae is not none %}
+          <p><strong>MAE:</strong> {{ r.mae }}</p>
+        {% endif %}
+        {% if r.modelo_guardado %}
+          <p><strong>Modelo:</strong> {{ r.modelo_guardado }}</p>
+        {% endif %}
+        {% if r.grafico_html %}
+          <div class="result-plot">{{ r.grafico_html|safe }}</div>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    <!-- Exógenas Avanzado -->
+    {% if resultados_exogenas_avanzado %}
+      <h2>Resultados Exógenas Avanzado</h2>
+      {% for r in resultados_exogenas_avanzado %}
+        <h3>{{ r.serie }}</h3>
+        <p>Basic MAE: {{ r.backtest_basic }} |
+           Tuned MAE: {{ r.backtest_tuned }} |
+           Selected MAE: {{ r.backtest_selected }}</p>
+        <div class="result-plot">{{ r.fig_basic|safe }}</div>
+        <div class="result-plot">{{ r.fig_tuned|safe }}</div>
+        <div class="result-plot">{{ r.fig_selected|safe }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Pronóstico Probabilístico -->
+    {% if resultados_pronostico %}
+      <h2>Pronóstico Probabilístico</h2>
+      {% for r in resultados_pronostico %}
+        <h3>{{ r.serie }}</h3>
+        <p>MAE final: {{ r.mae_final }},
+           Cobertura: {{ r.coverage_pct }}%,
+           Área intervalo: {{ r.interval_area }}</p>
+        <div class="result-plot">{{ r.plot_interval|safe }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Interpretabilidad -->
+    {% if resultados_interpretabilidad %}
+      <h2>Interpretabilidad del Modelo</h2>
+      {% for r in resultados_interpretabilidad %}
+        <h3>{{ r.serie }}</h3>
+        <h4>Importancias (top 10)</h4>
+        <div>{{ r.fi_html|safe }}</div>
+        <h4>SHAP Summary</h4>
+        <div>{{ r.shap_summary|safe }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Predicción Futura -->
+    {% if serie_futuro %}
+      <h2>Predicción Futura — {{ serie_futuro.name }}</h2>
+      <div class="result-plot">
+        {{ serie_futuro.plot().get_figure().to_html()|safe }}
+      </div>
+      <div class="result-plot">
+        {{ volumen_futuro.plot(kind='bar').get_figure().to_html()|safe }}
+      </div>
+      <p>
+        <a href="{{ url_for('static', filename='Downloads/' ~ descarga_prediccion) }}">
+          📥 Descargar Predicción
+        </a>
+        |
+        <a href="{{ url_for('static', filename='Downloads/' ~ descarga_volumen) }}">
+          📥 Descargar Volumen Diario
+        </a>
+      </p>
+    {% endif %}
+
+  </div>
+
+  <footer>
+    &copy; 2025 ScotiaGBS — Forecast APP by Nicolas Alejandro Ruz Alarcon
+  </footer>
+</body>
+</html>
